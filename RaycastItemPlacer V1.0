@@ -1,0 +1,50 @@
+
+using { /Fortnite.com/Devices }
+using { /Verse.org/Simulation }
+using { /UnrealEngine.com/Temporary/Diagnostics }
+using{/Fortnite.com/Characters}
+using{/UnrealEngine.com/Temporary/SpatialMath}
+using{/Verse.org/SceneGraph}
+using { /Verse.org/SpatialMath }
+using { /Verse.org/Colors/NamedColors }
+
+PlacementSystemDev := class(creative_device):
+
+    #Raycast, preview
+
+    OnBegin<override>()<suspends>:void=
+        if(Player := GetPlayspace().GetPlayers()[0]):
+            StartRaycast(Player)
+
+    StartRaycast(Player : player)<suspends>:void=
+        RaycastEntity := entity{}
+        RaycastEntity.AddComponents(array{Meshes.Box{Entity := RaycastEntity,Material_0 := Materials.PlacementMat{}}})
+        if(FC := Player.GetFortCharacter[],FCEntity := FC.GetEntity[],SimEntity := FCEntity.GetSimulationEntity[]):
+            SimEntity.AddEntities(array{RaycastEntity})
+
+            D := debug_draw{}
+            CollisionVol := collision_capsule{Radius := 30.0, Length := 20.0}
+            sync:
+                loop:
+                    Sleep(0.0)
+                    RaycastEntity.SetOrigin(entity_origin{Entity := FCEntity})
+                    var Counter : int =0 
+                    if(SweepHits := FC.GetEntity[].FindSweepHits((/Verse.org/SpatialMath:)Translation := FromVector3(FC.GetViewRotation().GetLocalForward()*300.0),(/Verse.org/SpatialMath:)transform{Translation := FCEntity.GetGlobalTransform().Translation+FromVector3((/UnrealEngine.com/Temporary/SpatialMath:)vector3{Z := 90.0})})):
+                        for (S : SweepHits):
+                            set Counter += 1
+                    if(Counter =0):
+                        RaycastEntity.SetGlobalTransform((/Verse.org/SpatialMath:)transform{Translation := FromVector3(FC.GetViewRotation().GetLocalForward()*300.0)})
+
+                loop:
+                    Sleep(0.0)
+                    if(SweepHits := FC.GetEntity[].FindSweepHits(FromVector3((/UnrealEngine.com/Temporary/SpatialMath:)vector3{X := 100.0, Y := 100.0,Z := -90.0}),(/Verse.org/SpatialMath:)transform{Translation := FCEntity.GetGlobalTransform().Translation+FromVector3((/UnrealEngine.com/Temporary/SpatialMath:)vector3{Z := 90.0})}), CollisionVol):
+                        var Counter : int= 0
+                        for(IDX -> S : SweepHits):
+                            if(Counter = 0):
+                                LineToTrace := D.DrawLine(FC.GetTransform().Translation + (/UnrealEngine.com/Temporary/SpatialMath:)vector3{Z := 90.0}, FromVector3(S.ContactPosition), ?Color := Blue)
+                                set Counter += 1
+                
+
+            
+            
+    
