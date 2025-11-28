@@ -1,0 +1,77 @@
+
+using { /Fortnite.com/Devices }
+using { /Verse.org/Simulation }
+using { /UnrealEngine.com/Temporary/Diagnostics }
+using{/Fortnite.com/Characters}
+using{/UnrealEngine.com/Temporary/SpatialMath}
+using{/Verse.org/SceneGraph}
+using { /Verse.org/SpatialMath }
+using { /Verse.org/Colors/NamedColors }
+
+PlacementSystemDev := class(creative_device):
+
+    var Placing : logic = true
+
+    @editable PlaceTrigger : input_trigger_device = input_trigger_device{}
+
+    #Raycast, preview
+
+    OnBegin<override>()<suspends>:void=
+        if(Player := GetPlayspace().GetPlayers()[0]):
+            spawn:
+                StartRaycast(Player)
+            P := PlaceTrigger.PressedEvent.Await()
+            set Placing = false
+
+
+    StartRaycast(Player : player)<suspends>:void=
+        RaycastEntity := entity{}
+        RaycastEntity.AddComponents(array{Meshes.Box{Entity := RaycastEntity,Material_0 := Materials.PlacementMat{}}})
+        if(FC := Player.GetFortCharacter[],FCEntity := FC.GetEntity[],SimEntity := FCEntity.GetSimulationEntity[]):
+            SimEntity.AddEntities(array{RaycastEntity})
+
+            D := debug_draw{}
+            CollisionVol := collision_capsule{Radius := 30.0, Length := 20.0}
+            R := RaycastEntity.GetLocalTransform().Translation
+            RaycastEntity.SetOrigin(entity_origin{Entity := FCEntity})
+            sync:
+                loop:
+                    Sleep(0.0)
+                    if(Placing?):
+                        var CurrentHits : []sweep_hit =  array{}
+                        var Counter : int =0 
+                        var Counter2 : int = 0
+
+                        var LastPosition :(/Verse.org/SpatialMath:)transform = (/Verse.org/SpatialMath:)transform{}
+                        SweepHits := RaycastEntity.FindSweepHits((/Verse.org/SpatialMath:)Translation := FromVector3((/UnrealEngine.com/Temporary/SpatialMath:)vector3{X := 20.0, Y := 20.0,Z := -20.0}),RaycastEntity.GetGlobalTransform())
+                
+                        D.DrawSphere(RaycastEntity.GetGlobalTransform().Translation, ?Radius := 30.0, ?Color := Black)
+
+                        for (S : SweepHits):
+                            set Counter += 1
+                            set CurrentHits += array{S}
+                        
+                        if(CH := CurrentHits[0], CH.ContactPosition.Up > RaycastEntity.GetGlobalTransform().Translation.Up):
+                            RaycastEntity.SetGlobalTransform((/Verse.org/SpatialMath:)transform{Translation := RaycastEntity.GetGlobalTransform().Translation + FromVector3((/UnrealEngine.com/Temporary/SpatialMath:)vector3{Z := Abs(CH.ContactPosition.Up - RaycastEntity.GetGlobalTransform().Translation.Up)})})
+                        if(Counter =0 ):
+                            RaycastEntity.SetGlobalTransform((/Verse.org/SpatialMath:)transform{Translation := FromVector3((FC.GetTransform().Translation + FC.GetViewRotation().GetLocalForward()*400.0)- (/UnrealEngine.com/Temporary/SpatialMath:)vector3{Z := 0.0})})
+                            set LastPosition = RaycastEntity.GetGlobalTransform()
+                        else:
+                            NewLoc := (/Verse.org/SpatialMath:)transform{Translation := FromVector3((FC.GetTransform().Translation + FC.GetViewRotation().GetLocalForward()*400.0)- (/UnrealEngine.com/Temporary/SpatialMath:)vector3{Z := 0.0})}
+                            if(LastPosition.Translation.Up < NewLoc.Translation.Up ):
+                                RaycastEntity.SetGlobalTransform(NewLoc)
+                    else:
+                        RaycastEntity.ResetOrigin()
+                        break
+                        #Print("{RaycastEntity.GetGlobalTransform().Translation}, {FC.GetTransform().Translation + FC.GetViewRotation().GetLocalForward()*100.0}")
+                loop:
+                    Sleep(0.0)
+                    if(SweepHits := FC.GetEntity[].FindSweepHits(FromVector3((/UnrealEngine.com/Temporary/SpatialMath:)vector3{X := 40.0, Y := 40.0,Z := -20.0}),(/Verse.org/SpatialMath:)transform{Translation := RaycastEntity.GetGlobalTransform().Translation}), CollisionVol):
+                        var Counter : int= 0
+                        for(IDX -> S : SweepHits):
+                            if(Counter = 0):
+                                LineToTrace := D.DrawLine(FromVector3(RaycastEntity.GetGlobalTransform().Translation), FromVector3(S.ContactPosition), ?Color := Blue, ?Thickness := 2.0, ?Duration := Inf)
+                                set Counter += 1
+            
+            
+    
